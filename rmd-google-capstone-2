@@ -1,0 +1,224 @@
+---
+title: "Google Capstone Case Study-2"
+author: "Prateek Srivastava"
+date: "2023-02-01"
+output: html_document
+---
+
+# Ask
+
+**About the Company**
+
+Bellabeat is a high-tech manufacturer of health-focused products for women.Trying to become a larger player in the global smart device market.
+
+**Stakeholders**
+
+* Urška Sršen: Bellabeat’s co founder and Chief Creative Officer. 
+*Sando Mur: Mathematician and Bellabeat’s co founder.
+* Bellabeat marketing analytics team.
+
+**Business Task**
+
+Analyze smart device usage data in order to gain insight into how people are already using their smart devices. Then, using this information,formate a high-level recommendations for how these trends can inform Bellabeat marketing strategy.
+
+# Prepare
+
+**About Data**
+
+FitBit Fitness Tracker Data (CC0: Public Domain, dataset made available through Mobius): This Kaggle data set contains personal fitness tracker from thirty fitbit users. Thirty eligible Fitbit users consented to the submission of personal tracker data, including minute-level output for physical activity, heart rate, and sleep monitoring.
+
+**ROCCC Analyses**
+
+The data used in this analysis has several limitations. Firstly, the sample size of 33 individuals is not representative of the larger population. Additionally, the data collection period was limited to only 30 days, which may not accurately reflect long-term behavior. Furthermore, initial analyses have revealed that not all of the 33 participants consistently used the activity tracking devices throughout the 30 day period, leading to missing data.
+
+It is worth noting that the data was sourced from a third-party software system (Fitabase) that was installed on Fitbit activity trackers. This data is dated and was collected 6 years ago, which should be taken into consideration when interpreting the findings.The data has been properly cited, with all necessary links included.
+
+
+**Loading Packages**
+
+```{r loading libraries}
+library(tidyverse)
+library(lubridate)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+```
+
+**Importing Data**
+
+After initial filtering of the data using the countunique() function in Google Sheets, it was determined that four data frames would be utilized for further analyses. The first data set, named "dailyActivity_merged", already had attributes merged from other data sets, so there was no need to add any additional information. The other three data frames that were used in the analysis were hourlySteps, dailyActivity_meraged, dailyCalories_merged, and Sleepday_merged.
+
+To maintain consistency and convenience, all of the new data frames were shortened and converted to lowercase for ease of use during the analysis.
+
+```{r reading csv files}
+dailyactivity <- read.csv('C:\\Users\\ayush\\Documents\\Fitbit\\dailyActivity_merged.csv')
+dailycalories <- read.csv('C:\\Users\\ayush\\Documents\\Fitbit\\dailyCalories_merged.csv')
+sleepday <- read.csv('C:\\Users\\ayush\\Documents\\Fitbit\\sleepDay_merged.csv')
+hourlysteps <- read.csv('C:\\Users\\ayush\\Documents\\Fitbit\\hourlySteps_merged.csv')
+```
+
+**Exploring the data**
+
+Here we breifly look to our data to check for any insconsisteny in comlum names and data types.
+
+Take a look at the daily_activity data.
+
+```{r checking the loaded data}
+glimpse(dailyactivity)
+glimpse(dailycalories)
+glimpse(sleepday)
+glimpse(hourlysteps)
+```
+
+Here we can see all three columns have ID column which will you used to merage them,futhermore Activitydate and ActivityDay are wrong data type which is character.Thus we will change them and SleepDay has date and time which will be splited into two columns with correct data types
+
+# Process
+
+**Fixing and formating**
+
+First we will convert the column names to lower case then change the column data type.
+
+```{r fixing names and formatting dates}
+colnames(sleepday) <- tolower(colnames(sleepday))
+colnames(dailycalories) <- tolower(colnames(dailycalories))
+colnames(dailyactivity) <- tolower(colnames(dailyactivity))
+colnames(hourlysteps) <- tolower(colnames(hourlysteps))
+
+dailyactivity$activitydate <- mdy(dailyactivity$activitydate)
+dailycalories$activityday <- mdy(dailycalories$activityday)
+sleepday$sleepday <- mdy_hms(sleepday$sleepday)
+hourlysteps$activityhour <- mdy_hms(hourlysteps$activityhour)
+
+sleepday$date <- as.Date(sleepday$sleepday)
+sleepday$time <- format.POSIXlt(as.POSIXlt(sleepday$sleepday), format = "%H:%M:%S")
+
+hourlysteps$date <- as.Date(hourlysteps$activityhour)
+hourlysteps$time <-format.POSIXlt(as.POSIXlt(hourlysteps$activityhour),
+        format = "%H:%M:%S")
+```
+
+# Analyze
+
+```{r}
+dailyactivity %>%  
+ select(totalsteps,
+        totaldistance,
+        sedentaryminutes,
+        calories)%>%
+  summary()
+```
+
+Based on the World Health Organization (WHO) recommendations, adults aged 18-64 should aim to take at least 10,000 steps per day to maintain a moderate level of physical activity. However, the summary statistics provided indicate that the average number of steps taken per person in the dataset is 7638, which falls significantly below the recommended number.
+
+Additionally, the average sedentary time for the individuals in the dataset is 991.2 minutes, which is equivalent to approximately 16 hours per day. This is a cause for concern as prolonged sitting has been linked to several health risks, including an increased risk of chronic diseases such as heart disease, diabetes, and cancer.
+
+```{r}
+sleepday %>%
+  select(totalsleeprecords,
+         totalminutesasleep,
+         totaltimeinbed)%>%
+  summary()
+```
+
+The average amount of time spent asleep per person in the dataset is 419.5 minutes per night which is equivalent to approximately 7 hours of sleep per night. This falls within the recommended range of 7-9 hours of sleep per night by the WHO.
+
+#Share
+
+By studying the correlation between the number of steps taken, the amount of sedentary time, and the number of calories burned, we can gain valuable insights into our customers' usage patterns and pinpoint areas for potential improvement. This analysis can help us better understand how these factors are related and how changes in one area may impact the others. By identifying these connections, we can develop strategies to help our customers achieve their health and fitness goals, and ultimately improve their overall wellbeing.
+
+```{r}
+cor(dailyactivity$totalsteps, dailyactivity$sedentaryminutes)
+```
+
+Result show that there is a small negative correlation, which means that there is a weak association between the two variables in the opposite direction
+
+```{r}
+cor(dailyactivity$totalsteps, dailyactivity$calories)
+```
+
+There is moderate positive correlation, which means that there is a moderate association between the two variables in the same direction.which can be seen in graphs below.
+
+```{r}
+ggplot(data = dailyactivity, mapping = aes(x=totalsteps, y=sedentaryminutes))+ geom_point() + geom_smooth() + labs(title = "Daily steps Vs sedentary minutes")
+```
+
+```{r}
+ggplot(data = dailyactivity, mapping = aes(x = totalsteps, y = calories))+ geom_point() + geom_smooth() + labs(title = "Daily steps vs Calories")
+```
+
+```{r}
+ggplot(data = sleepday, mapping = aes(x=totalminutesasleep, y=totaltimeinbed ))+ geom_point() + geom_smooth() + 
+  labs(title = "Time in bed Vs Time asleep")
+```
+
+Here it is clear that there is strong postive coorelation.
+
+Next we will check what time people are most active.
+
+```{r}
+hourlysteps %>%
+           group_by(time) %>%
+           summarize(average_steps = mean(steptotal)) %>%
+           ggplot() +
+           geom_col(mapping = aes(x=time, y = average_steps, fill = average_steps)) + 
+           labs(title = "Hourly steps throughout the day", x="time", y="steps") + 
+           scale_fill_gradient(low = "blue", high = "red")+
+          theme(axis.text.x = element_text(angle = 90))
+```
+
+It can be seen that from 12:00 to 14:00 and from 17:00 to 19:00 are when the people are walking the most.We can also check for which day of the week they are most active or walk the most.
+
+```{r}
+hourlysteps$weekdays <- weekdays(hourlysteps$date)
+hourlysteps$weekdays <- factor(hourlysteps$weekdays, levels = c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"))
+ggplot(data=hourlysteps) +
+    geom_col(aes(weekdays, steptotal), fill="medium blue") +
+    labs(title = "Daily steps per weekday", x= "", y = "Step count") +
+    theme(axis.text.x = element_text(angle = 45,vjust = 0.5, hjust = 1))
+```
+
+We can see that on Sunday, and Monday people have least step count and Tuesday to Thursday have the most step count.
+
+Next we will explore the relationship between activity and sleep.For this we will be merging dailyactivity and sleepday data frames using id columns.
+
+**Merging these two datasets together**
+
+```{r}
+merged_data <- merge(sleepday, dailyactivity, by = c("id"))
+ggplot(data = sample_frac(merged_data, 0.1) , mapping = aes(x=totalsteps, y = totalminutesasleep))+geom_point()+
+geom_smooth()+ labs(title="Sleep Vs Steps")
+```
+
+Result indicates a weak negative linear relationship between the two variables. As one variable increases, the other decreases, but the rate of change is not constant and the relationship is not strong.We can confirm thisbyranning following code
+
+```{r}
+cor(merged_data$totalminutesasleep, merged_data$totalsteps)
+```
+
+Next we will check if sleep and sedentary time has any relationship.
+
+```{r}
+ggplot(data = sample_frac(merged_data, 0.1), mapping = aes(x = totalminutesasleep, y = sedentaryminutes)) + 
+  geom_point() + 
+  geom_smooth() + 
+  labs(title = "Sleep Vs Sedentary")
+```
+
+```{r}
+cor(merged_data$totalminutesasleep, merged_data$sedentaryminutes)
+```
+
+Result indicates a moderate negative linear relationship between the two variables. As one variable increases, the other decreases, and the rate of change is relatively consistent and the relationship is moderate.
+
+# Act
+
+**Recommendations:**
+* Based on our analysis of daily step vs sedentary data, it is recommended to implement an alert feature in the Bellabeats app to remind users to engage in physical activity after prolonged periods of inactivity.
+
+* To support weight loss or general health goals, it is recommended that the app allows users to set calorie targets and provides alerts when step counts fall below set goals.
+
+* To promote adequate sleep, it is recommended that the app includes a notification to remind users to reduce sedentary time before bed.
+
+Overall, it is recommended that the Bellabeats app be utilized as a tool to assist users in maintaining a healthy lifestyle through monitoring and encouraging physical activity, calorie management, and adequate sleep.
+
+However, due to the limited sample size of 33 individuals and the short data collection period of 30 days, these findings should be interpreted with caution and further research is needed to confirm these results.
